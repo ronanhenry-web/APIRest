@@ -5,10 +5,10 @@ import com.example.example.model.User;
 import com.example.example.repository.model.PokemonEntity;
 import com.example.example.repository.model.UserEntity;
 import com.example.example.repository.users.UsersRepository;
-import com.example.example.utils.exceptions.FunctionalExceptionType;
-import com.example.example.utils.exceptions.RuntimeExceptionFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,12 +28,14 @@ public class UsersServiceImpl implements UsersService {
 
     @Override
     public List<User> getAllUsers() {
+        log.info("Fetching all users");
         return convertToUserList((List<UserEntity>) usersRepository.findAll());
     }
 
 
     @Override
     public Optional<User> getUserById(Long id) {
+        log.debug("Fetching user by ID: {}", id);
         return usersRepository.findById(id).map(this::convertToUser);
     }
 
@@ -63,7 +65,7 @@ public class UsersServiceImpl implements UsersService {
                     .findFirst()
                     .orElse(null)));
         } else {
-            throw RuntimeExceptionFactory.getFunctionalRuntimeException(log, FunctionalExceptionType.NOT_FOUND, "User not found", userId);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found");
         }
     }
 
@@ -74,7 +76,6 @@ public class UsersServiceImpl implements UsersService {
             UserEntity userEntity = existingUser.get();
 
             Optional<PokemonEntity> existingPokemonEntity = userEntity.getPokemonList().stream()
-                    .filter(pokemon -> pokemon.getId().equals(pokemonId))
                     .findFirst();
 
             if (existingPokemonEntity.isPresent()) {
@@ -82,12 +83,16 @@ public class UsersServiceImpl implements UsersService {
                 pokemonEntityToUpdate.setName(updatedPokemon.getName());
                 pokemonEntityToUpdate.setType(updatedPokemon.getType());
 
-                return Optional.ofNullable(convertToPokemon(pokemonEntityToUpdate));
+                UserEntity savedUserEntity = usersRepository.save(userEntity);
+
+                return Optional.ofNullable(convertToPokemon(savedUserEntity.getPokemonList().stream()
+                        .findFirst()
+                        .orElse(null)));
             } else {
-                throw RuntimeExceptionFactory.getFunctionalRuntimeException(log, FunctionalExceptionType.NOT_FOUND, "Pokemon not found", pokemonId);
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Pokemon not found");
             }
         } else {
-            throw RuntimeExceptionFactory.getFunctionalRuntimeException(log, FunctionalExceptionType.NOT_FOUND, "User not found", userId);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User not found");
         }
     }
 
@@ -99,13 +104,14 @@ public class UsersServiceImpl implements UsersService {
             UserEntity savedEntity = usersRepository.save(updatedUserEntity);
             return Optional.ofNullable(convertToUser(savedEntity));
         } else {
-            throw RuntimeExceptionFactory.getFunctionalRuntimeException(log, FunctionalExceptionType.NOT_FOUND, "User not found", user.getId());
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
     }
 
 
     @Override
     public void deleteUser(Long userId) {
+        log.warn("Deleting user with ID: {}", userId);
         usersRepository.deleteById(userId);
     }
 
@@ -118,10 +124,8 @@ public class UsersServiceImpl implements UsersService {
         if (userEntity == null) {
             return null;
         }
-        List<Pokemon> pokemonList = new ArrayList<>();
-        if (userEntity.getPokemonList() != null) {
-            pokemonList = convertToPokemonList(new ArrayList<>(userEntity.getPokemonList()));
-        }
+        List<Pokemon> pokemonList = convertToPokemonList(new ArrayList<>(userEntity.getPokemonList()));
+
         return User.builder()
                 .id(userEntity.getId())
                 .firstname(userEntity.getFirstname())

@@ -8,10 +8,7 @@ import com.example.example.repository.pokemons.PokemonsRepository;
 import com.example.example.repository.users.UsersRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -96,9 +93,6 @@ public class UsersServiceImplTest {
         when(usersRepositoryMock.save(usersServiceArgumentCaptor.capture()))
                 .thenReturn(userToCreate);
 
-        assertEquals("Riri", userToCreate.getFirstname());
-        assertEquals("Roro", userToCreate.getLastname());
-
         // Act
         User userToAssert = usersService.createUser(User.builder()
                 .id(userToCreate.getId())
@@ -107,12 +101,12 @@ public class UsersServiceImplTest {
                 .build());
 
         // Assert
-        verify(usersRepositoryMock, times(1)).save(usersServiceArgumentCaptor.capture());
-
         assertNotNull(userToAssert);
         UserEntity capturedUserEntity = usersServiceArgumentCaptor.getValue();
         assertEquals("Riri", capturedUserEntity.getFirstname());
         assertEquals("Roro", capturedUserEntity.getLastname());
+
+        verify(usersRepositoryMock, times(1)).save(Mockito.any());
     }
 
 
@@ -128,10 +122,6 @@ public class UsersServiceImplTest {
                 .build();
         when(usersRepositoryMock.save(usersServiceArgumentCaptor.capture())).thenAnswer(invocation -> {
             UserEntity savedUserEntity = invocation.getArgument(0);
-
-            assertEquals("Riirii", savedUserEntity.getFirstname());
-            assertEquals("Rooroo", savedUserEntity.getLastname());
-
             return UserEntity.builder()
                     .id(savedUserEntity.getId())
                     .firstname(savedUserEntity.getFirstname())
@@ -143,11 +133,11 @@ public class UsersServiceImplTest {
         Optional<User> userToAssert = usersService.updateUser(updatedUser);
 
         // Assert
-        verify(usersRepositoryMock, times(1)).save(usersServiceArgumentCaptor.capture());
         assertTrue(userToAssert.isPresent());
         UserEntity capturedUserEntity = usersServiceArgumentCaptor.getValue();
         assertEquals("Riirii", capturedUserEntity.getFirstname());
         assertEquals("Rooroo", capturedUserEntity.getLastname());
+        verify(usersRepositoryMock, times(1)).save(Mockito.any());
     }
 
     @Test
@@ -155,7 +145,6 @@ public class UsersServiceImplTest {
         // Arrange
         Long userId = 1L;
         Long pokemonId = 1L;
-
         PokemonEntity pokemonToUpdate = PokemonEntity.builder()
                 .id(pokemonId)
                 .name("Pikachu")
@@ -164,9 +153,6 @@ public class UsersServiceImplTest {
 
         when(pokemonsRepositoryMock.findByIdAndUsers_Id(pokemonId, userId))
                 .thenReturn(Optional.of(pokemonToUpdate));
-
-        assertEquals("Pikachu", pokemonToUpdate.getName());
-        assertEquals("Electric", pokemonToUpdate.getType());
 
         Pokemon updatedPokemon = Pokemon.builder()
                 .id(pokemonId)
@@ -181,12 +167,12 @@ public class UsersServiceImplTest {
         Optional<Pokemon> pokemonToAssert = usersService.updatePokemonForUser(userId, pokemonId, updatedPokemon);
 
         // Assert
-        verify(pokemonsRepositoryMock, times(1)).save(pokemonsArgumentCaptor.capture());
-
         assertNotNull(pokemonToAssert);
         PokemonEntity capturedPokemonEntity = pokemonsArgumentCaptor.getValue();
         assertEquals("Raichu", capturedPokemonEntity.getName());
         assertEquals("Electric", capturedPokemonEntity.getType());
+
+        verify(pokemonsRepositoryMock, times(1)).save(Mockito.any());
     }
 
     @Test

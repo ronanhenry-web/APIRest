@@ -4,8 +4,6 @@ import com.example.example.model.Pokemon;
 import com.example.example.model.User;
 import com.example.example.service.pokemons.PokemonsService;
 import com.example.example.service.users.UsersService;
-import com.example.example.utils.exceptions.FunctionalExceptionType;
-import com.example.example.utils.exceptions.FunctionalRuntimeException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,9 +34,7 @@ public class UsersController {
 
         return userOptional
                 .map(ResponseEntity::ok)
-                .orElseThrow(() -> new FunctionalRuntimeException(
-                        "User not found with id: " + id,
-                        FunctionalExceptionType.NOT_FOUND));
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
@@ -59,21 +55,20 @@ public class UsersController {
     }
 
     @PatchMapping("/{id}/pokemons/{pokemonId}")
-    public ResponseEntity<Pokemon> updatePokemon(
+    public ResponseEntity<Optional<Pokemon>> updatePokemon(
             @PathVariable Long id,
             @PathVariable Long pokemonId,
             @RequestBody Pokemon updatedPokemon) {
-        return usersService.updatePokemonForUser(id, pokemonId, updatedPokemon)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        Optional<Pokemon> result = usersService.updatePokemonForUser(id, pokemonId, updatedPokemon);
+        return ResponseEntity.ok(result);
     }
 
     @PatchMapping("/{id}")
     public ResponseEntity<User> update(@PathVariable Long id, @RequestBody User user) {
         user.setId(id);
-        return usersService.updateUser(user)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        Optional<User> updatedUser = usersService.updateUser(user);
+        return updatedUser.map(ResponseEntity::ok)
+                .orElse(ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
 
     @DeleteMapping("/{id}")
