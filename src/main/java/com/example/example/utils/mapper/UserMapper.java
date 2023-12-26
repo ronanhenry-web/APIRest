@@ -15,7 +15,7 @@ public interface UserMapper {
     User userEntityToUser(UserEntity entity);
 
     UserEntity userToUserEntity(User user);
-
+    
     Pokemon pokemonEntityToPokemon(PokemonEntity pokemonEntity);
 
 }
