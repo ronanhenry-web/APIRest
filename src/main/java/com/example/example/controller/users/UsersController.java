@@ -2,7 +2,6 @@ package com.example.example.controller.users;
 
 import com.example.example.model.Pokemon;
 import com.example.example.model.User;
-import com.example.example.service.pokemons.PokemonsService;
 import com.example.example.service.users.UsersService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,11 +15,8 @@ import java.util.Optional;
 public class UsersController {
     private final UsersService usersService;
 
-    private final PokemonsService pokemonsService;
-
-    public UsersController(UsersService usersService, PokemonsService pokemonsService) {
+    public UsersController(UsersService usersService) {
         this.usersService = usersService;
-        this.pokemonsService = pokemonsService;
     }
 
     @GetMapping
@@ -74,12 +70,6 @@ public class UsersController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         usersService.deleteUser(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @DeleteMapping("/{id}/pokemons/{pokemonId}")
-    public ResponseEntity<Void> deletePokemon(@PathVariable Long userId, @PathVariable Long pokemonId) {
-        pokemonsService.deletePokemon(userId, pokemonId);
         return ResponseEntity.noContent().build();
     }
 }

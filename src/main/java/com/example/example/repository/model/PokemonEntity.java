@@ -1,10 +1,10 @@
 package com.example.example.repository.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.io.Serializable;
-import java.util.Set;
 
 @Entity
 @Getter
@@ -31,6 +31,8 @@ public class PokemonEntity implements Serializable {
     @Column(name = "img_url")
     private String imgUrl;
 
-    @ManyToMany(mappedBy = "pokemonList", fetch = FetchType.LAZY)
-    private Set<UserEntity> users;
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    @JsonBackReference
+    private UserEntity user;
 }

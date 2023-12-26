@@ -8,9 +8,7 @@ import java.util.Optional;
 
 @Repository
 public interface PokemonsRepository extends CrudRepository<PokemonEntity, Long> {
-    Optional<PokemonEntity> findByIdAndUsers_Id(Long pokemonId, Long userId);
+    Optional<PokemonEntity> findByIdAndUserId(Long pokemonId, Long userId);
 
     void deleteById(Long pokemonId);
-
-    void deleteByIdAndUsers_Id(Long pokemonId, Long userId);
 }

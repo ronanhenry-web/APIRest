@@ -1,5 +1,6 @@
 package com.example.example.repository.model;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -25,11 +26,7 @@ public class UserEntity implements Serializable {
     @Column(name = "last_name")
     private String lastname;
 
-    @ManyToMany(cascade = CascadeType.ALL)
-    @JoinTable(
-            name = "user_pokemon",
-            joinColumns = {@JoinColumn(name = "user_id")},
-            inverseJoinColumns = {@JoinColumn(name = "pokemon_id")}
-    )
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
     private List<PokemonEntity> pokemonList;
 }
