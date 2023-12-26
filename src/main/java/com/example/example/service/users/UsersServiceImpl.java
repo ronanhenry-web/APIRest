@@ -5,9 +5,12 @@ import com.example.example.model.User;
 import com.example.example.repository.model.PokemonEntity;
 import com.example.example.repository.model.UserEntity;
 import com.example.example.repository.users.UsersRepository;
+import com.example.example.utils.exceptions.FunctionalExceptionType;
+import com.example.example.utils.exceptions.RuntimeExceptionFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -25,13 +28,85 @@ public class UsersServiceImpl implements UsersService {
 
     @Override
     public List<User> getAllUsers() {
-        return convertToUserList(usersRepository.findAll());
+        return convertToUserList((List<UserEntity>) usersRepository.findAll());
     }
 
 
     @Override
     public Optional<User> getUserById(Long id) {
         return usersRepository.findById(id).map(this::convertToUser);
+    }
+
+    @Override
+    public User createUser(User user) {
+        UserEntity userEntity = convertToUserEntity(user);
+        UserEntity savedEntity = usersRepository.save(userEntity);
+        return convertToUser(savedEntity);
+    }
+
+    @Override
+    public Optional<Pokemon> addPokemonToUser(Long userId, Pokemon pokemon) {
+        Optional<User> existingUser = getUserById(userId);
+        if (existingUser.isPresent()) {
+            UserEntity userEntity = convertToUserEntity(existingUser.get());
+
+            PokemonEntity pokemonEntity = PokemonEntity.builder()
+                    .name(pokemon.getName())
+                    .type(pokemon.getType())
+                    .imgUrl(pokemon.getImgUrl())
+                    .build();
+
+            userEntity.getPokemonList().add(pokemonEntity);
+            UserEntity savedUserEntity = usersRepository.save(userEntity);
+
+            return Optional.ofNullable(convertToPokemon(savedUserEntity.getPokemonList().stream()
+                    .findFirst()
+                    .orElse(null)));
+        } else {
+            throw RuntimeExceptionFactory.getFunctionalRuntimeException(log, FunctionalExceptionType.NOT_FOUND, "User not found", userId);
+        }
+    }
+
+    @Override
+    public Optional<Pokemon> updatePokemonForUser(Long userId, Long pokemonId, Pokemon updatedPokemon) {
+        Optional<UserEntity> existingUser = usersRepository.findById(userId);
+        if (existingUser.isPresent()) {
+            UserEntity userEntity = existingUser.get();
+
+            Optional<PokemonEntity> existingPokemonEntity = userEntity.getPokemonList().stream()
+                    .filter(pokemon -> pokemon.getId().equals(pokemonId))
+                    .findFirst();
+
+            if (existingPokemonEntity.isPresent()) {
+                PokemonEntity pokemonEntityToUpdate = existingPokemonEntity.get();
+                pokemonEntityToUpdate.setName(updatedPokemon.getName());
+                pokemonEntityToUpdate.setType(updatedPokemon.getType());
+
+                return Optional.ofNullable(convertToPokemon(pokemonEntityToUpdate));
+            } else {
+                throw RuntimeExceptionFactory.getFunctionalRuntimeException(log, FunctionalExceptionType.NOT_FOUND, "Pokemon not found", pokemonId);
+            }
+        } else {
+            throw RuntimeExceptionFactory.getFunctionalRuntimeException(log, FunctionalExceptionType.NOT_FOUND, "User not found", userId);
+        }
+    }
+
+    @Override
+    public Optional<User> updateUser(User user) {
+        Optional<User> existingUser = getUserById(user.getId());
+        if (existingUser.isPresent()) {
+            UserEntity updatedUserEntity = convertToUserEntity(user);
+            UserEntity savedEntity = usersRepository.save(updatedUserEntity);
+            return Optional.ofNullable(convertToUser(savedEntity));
+        } else {
+            throw RuntimeExceptionFactory.getFunctionalRuntimeException(log, FunctionalExceptionType.NOT_FOUND, "User not found", user.getId());
+        }
+    }
+
+
+    @Override
+    public void deleteUser(Long userId) {
+        usersRepository.deleteById(userId);
     }
 
 
@@ -43,13 +118,43 @@ public class UsersServiceImpl implements UsersService {
         if (userEntity == null) {
             return null;
         }
-
+        List<Pokemon> pokemonList = new ArrayList<>();
+        if (userEntity.getPokemonList() != null) {
+            pokemonList = convertToPokemonList(new ArrayList<>(userEntity.getPokemonList()));
+        }
         return User.builder()
                 .id(userEntity.getId())
                 .firstname(userEntity.getFirstname())
                 .lastname(userEntity.getLastname())
-                .pokemonList(convertToPokemonList(userEntity.getPokemonList()))
+                .pokemonList(pokemonList)
                 .build();
+    }
+
+    /**
+     * @param user
+     * @return Converts a user to a userEntity.
+     */
+    private UserEntity convertToUserEntity(User user) {
+        if (user == null) {
+            return null;
+        }
+
+        return UserEntity.builder()
+                .id(user.getId())
+                .firstname(user.getFirstname())
+                .lastname(user.getLastname())
+                .pokemonList(convertToPokemonEntityList(user.getPokemonList(), user.getId()))
+                .build();
+    }
+
+    /**
+     * @param userEntities
+     * @return Converts an List of userEntity to a list of user
+     */
+    private List<User> convertToUserList(List<UserEntity> userEntities) {
+        return StreamSupport.stream(userEntities.spliterator(), false)
+                .map(this::convertToUser)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -72,12 +177,37 @@ public class UsersServiceImpl implements UsersService {
     }
 
     /**
-     * @param userEntities
-     * @return Converts an List of userEntity to a list of user
+     * @param pokemonList
+     * @param userId
+     * @return Converts a list of pokemon to a list of pokemonEntity
      */
-    private List<User> convertToUserList(Iterable<UserEntity> userEntities) {
-        return StreamSupport.stream(userEntities.spliterator(), false)
-                .map(this::convertToUser)
-                .collect(Collectors.toList());
+    private List<PokemonEntity> convertToPokemonEntityList(List<Pokemon> pokemonList, Long userId) {
+        if (pokemonList != null) {
+            return pokemonList.stream()
+                    .map(pokemon -> PokemonEntity.builder()
+                            .id(pokemon.getId())
+                            .name(pokemon.getName())
+                            .type(pokemon.getType())
+                            .imgUrl(pokemon.getImgUrl())
+                            .build())
+                    .collect(Collectors.toList());
+        }
+        return Collections.emptyList();
+    }
+
+    /**
+     * @param pokemonEntity
+     * @return Converts a pokemonEntity to a pokemon
+     */
+    private Pokemon convertToPokemon(PokemonEntity pokemonEntity) {
+        if (pokemonEntity == null) {
+            return null;
+        }
+
+        return Pokemon.builder()
+                .id(pokemonEntity.getId())
+                .name(pokemonEntity.getName())
+                .type(pokemonEntity.getType())
+                .build();
     }
 }

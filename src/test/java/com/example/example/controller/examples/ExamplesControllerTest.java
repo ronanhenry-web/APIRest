@@ -1,6 +1,5 @@
-package com.example.example.controller;
+package com.example.example.controller.examples;
 
-import com.example.example.controller.examples.ExamplesController;
 import com.example.example.model.Example;
 import com.example.example.service.examples.ExamplesServiceImpl;
 import org.junit.jupiter.api.Test;
